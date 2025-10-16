@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Self, Any
 from bscose.construction.chain import Chain, Flow
 from bscose.construction.node import Operation, PatientOperation, Node, Sender, Receiver
 from bscose.construction.parameter import ParameterSet
@@ -13,11 +13,17 @@ class Recipe:
         self._node_name_to_chain_names: dict[str, str] = {}
         self._chain_connections: dict[Chain, set[Chain]] = {}
         self._num_chain_ids_created: int = 0
+        self.parameters: dict[str, Any] = {}
         #self._parameters = ParameterSet() # Save this for when we need speed down the line
 
     @property
     def name(self) -> str:
         return self._name
+
+    def get(self, node_name: str) -> Node:
+        if node_name not in self._node_name_to_chain_names:
+            raise KeyError(f"{node_name} could not be found in the graph")
+        return self._chains[self._node_name_to_chain_names[node_name]].get(node_name)
 
     def get_parameters(self, node: Node) -> list[str]:
         list_of_parameters = []
@@ -84,28 +90,43 @@ class Pipeline(Recipe):
         self._chain_connections[new_chain] = set()
         return new_node
 
-    def add_node(self, name, node_type):
-        self.get_new_node(name, node_type)
+    def get(self, operation_name: str) -> Operation:
+        if operation_name not in self._node_name_to_chain_names:
+            raise KeyError(f"{operation_name} could not be found in the graph")
+        result = self._chains[self._node_name_to_chain_names[operation_name]].get(operation_name)
+        if not isinstance(result, Operation):
+            raise RuntimeError(f"A non-Operation node was detected in a {self.__class__.__name__}. Contact the developers")
+        return result
+
+    def add_operation(self, operation_type: type[Operation], name: str, ):
+        self.get_new_node(operation_type, name)
         return self
 
-    def delete_node(self, node):
+    def delete_operation(self, operation):
         raise NotImplementedError()
 
-    def connect_nodes(self, output_node: str | Node, input_node: str | Node) -> Self:
+    def connect_nodes(self, output_node: str | Node, input_node: str | Node,
+                      manual_wiring: list[tuple[str,str]] | None = None) -> Self:
         for node in [output_node, input_node]:
             if isinstance(node, str) and node not in self._node_name_to_chain_names:
                 raise ValueError(f"Cannot find node with name `{node}` does not exist")
-
+        # resolve to nodes
         output_var = output_node if isinstance(output_node, Node) \
             else self._chains[self._node_name_to_chain_names[output_node]].get(output_node)
         input_var = input_node if isinstance(input_node, Node) \
             else self._chains[self._node_name_to_chain_names[input_node]].get(input_node)
-        return self._connect_nodes(output_var, input_var)
 
-    def _connect_nodes(self, output_node: Node, input_node: Node):
+        # resolve wiring
+        return self._connect_nodes(output_var, input_var, manual_wiring)
+
+    def _connect_nodes(self, output_node: Node, input_node: Node,
+                       manual_wiring: list[tuple[str,str]] | None = None):
         # first, check if we can even connect the nodes:
-        auto_wiring = Node.generate_autowired_mapping(output_node, input_node, skip_on_bound_receivers=True)
-        if len(auto_wiring) == 0:
+        if manual_wiring is None:
+            wiring = Node.generate_autowired_mapping(output_node, input_node, skip_on_bound_receivers=True)
+        else:
+            wiring = Node.resolve_wiring_by_name(output_node, input_node, manual_wiring)
+        if len(wiring) == 0:
             raise ValueError(f"Output Node {output_node.name} and input Node {input_node.name} cannot be automatically "
                              f"connected; check Receiver/Sender names and existing connections.")
         output_chain = self._chains[self._node_name_to_chain_names[output_node.name]]
@@ -113,10 +134,10 @@ class Pipeline(Recipe):
 
         # check for special cases
         if output_chain is input_chain:
-            return self._connect_nodes_within_same_chain(output_chain, output_node, input_node, auto_wiring)
+            return self._connect_nodes_within_same_chain(output_chain, output_node, input_node, wiring)
         if (output_chain.is_tail_node_with_no_targets(output_node.name)
                 and input_chain.is_head_node_with_no_sources(input_node.name)):
-            return self._merge_chains_and_connect_nodes(output_chain, input_chain, auto_wiring)
+            return self._merge_chains_and_connect_nodes(output_chain, input_chain, wiring)
 
         # Break down chains as needed
         if not output_chain.is_tail_node(output_node.name):
@@ -127,7 +148,7 @@ class Pipeline(Recipe):
             raise NotImplementedError()
 
         # We're ready, perform the connection
-        return self._connect_head_to_tail_without_merge(output_chain, input_chain, auto_wiring)
+        return self._connect_head_to_tail_without_merge(output_chain, input_chain, wiring)
 
     def _connect_nodes_within_same_chain(self, chain: Chain, output_node: Node, input_node: Node, wiring: list[tuple[Sender, Receiver]]):
         raise NotImplementedError()
@@ -149,6 +170,15 @@ class Pipeline(Recipe):
 
     def _connect_head_to_tail_without_merge(self, output_chain: Chain, input_chain: Chain, wiring: list[tuple[Sender, Receiver]]):
         raise NotImplementedError()
+
+    def get_num_nodes(self):
+        summation = 0
+        for chain in self._chains.values():
+            summation += chain.size()
+        return summation
+
+    def get_num_chains(self):
+        return len(self._chains)
 
     def list_nodes(self):
         raise NotImplementedError()

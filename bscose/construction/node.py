@@ -4,7 +4,7 @@ from bscose.construction.event import (Event,
                                        Announcer
                                        )
 from bscose.construction.port import Receiver, Sender
-import data
+from bscose.construction.data import Type
 SomeTypeOfNode = TypeVar("SomeTypeOfNode", bound='Node', contravariant=True)
 
 
@@ -20,10 +20,10 @@ class Node:
         self._name = name
         #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
         self._inputs: dict[str, Receiver] = {}
-        self._unset_receivers: list[str] = []
+        self._unset_receivers: set[str] = set()
         #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
         self._outputs: dict[str, Sender] = {}
-        self._unused_outputs: list[str] = []
+        self._unused_outputs: set[str] = set()
         #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
         self.parameter_change_announcer: Announcer = Announcer()
 
@@ -62,6 +62,18 @@ class Node:
                                  f"is already bound to `{bound_sender}`({bound_sender.name}) on Node `{bound_node}`({bound_node._name}) ")
             wiring_mapping.append((sender, receiver))
         return wiring_mapping
+
+    @classmethod
+    def resolve_wiring_by_name(cls, output_node: Self, input_node: Self,
+                               wiring_by_name: list[tuple[str,str]]) -> list[tuple[Sender, Receiver]]:
+        for sender_name, receiver_name in wiring_by_name:
+            if sender_name not in output_node._outputs:
+                raise ValueError(f"Cannot find node with name `{sender_name}`; does not exist")
+            if receiver_name not in input_node._inputs:
+                raise ValueError(f"Cannot find node with name `{receiver_name}`; does not exist")
+        #TODO: Check types?
+        return [(output_node._outputs[pair[0]], input_node._inputs[pair[1]]) for pair in wiring_by_name]
+
 
     @classmethod
     def connect_to_dependency(cls, output_node: Self, input_node: Self,
@@ -135,10 +147,10 @@ class Node:
             return True
         return False
 
-    def get_inputs(self) -> list[tuple[str, type[data.Type]]]:
+    def get_inputs(self) -> list[tuple[str, type[Type]]]:
         return [ (receiver.name, type(receiver.type)) for receiver in self._inputs.values() ]
 
-    def get_outputs(self) -> list[tuple[str, type[data.Type]]]:
+    def get_outputs(self) -> list[tuple[str, type[Type]]]:
         return [ (sender.name, type(sender.type)) for sender in self._outputs.values() ]
 
     def get_input_list(self) -> list[Receiver]:
@@ -159,21 +171,25 @@ class Node:
     def has_outputs_with_targets(self) -> bool:
         return len(self._unused_outputs) < len(self._outputs)
 
-    def __add_receiver(self, receiver: Receiver) -> None:
+    def _add_receiver(self, receiver: Receiver) -> None:
         if receiver.name in self._inputs:
             if receiver == self._inputs[receiver.name]:
                 return # getting here means adding is redundant
-            raise ValueError(f"Receiver `{receiver.name}` is already an existing Receiver. ")
+            raise ValueError(f"There is a Receiver in Node `{self._name}` that already has the name `{receiver.name}`")
+        if receiver.name in self._outputs:
+            raise ValueError(f"There is a Sender in Node `{self._name}` that already has the name `{receiver.name}`")
         self._inputs[receiver.name] = receiver
-        self._unset_receivers.append(receiver.name)
+        self._unset_receivers.add(receiver.name)
 
-    def __add_sender(self, receiver: Receiver) -> None:
-        if receiver.name in self._inputs:
-            if receiver == self._inputs[receiver.name]:
+    def _add_sender(self, sender: Sender) -> None:
+        if sender.name in self._outputs:
+            if sender == self._outputs[sender.name]:
                 return # getting here means adding is redundant
-            raise ValueError(f"Receiver `{receiver.name}` is already an existing Receiver. ")
-        self._inputs[receiver.name] = receiver
-        self._unset_receivers.append(receiver.name)
+            raise ValueError(f"There is a Sender in Node `{self._name}` that already has the name `{sender.name}`")
+        if sender.name in self._inputs:
+            raise ValueError(f"There is a Receiver in Node `{self._name}` that already has the name `{sender.name}`")
+        self._outputs[sender.name] = sender
+        self._unused_outputs.add(sender.name)
 
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 #               Node Definitions                #

@@ -1,6 +1,6 @@
 from typing import Self
 
-import data
+from bscose.construction.data import Type
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 #TODO: Need to properly type dtype, not just use string, see `data.py`
 class Port:
-    def __init__(self, name: str, dtype: type[data.Type]):
+    def __init__(self, name: str, dtype: type[Type]):
         self._name = name
         self._type = dtype()
 
@@ -18,11 +18,11 @@ class Port:
         return self._name
 
     @property
-    def type(self) -> data.Type:
+    def type(self) -> Type:
         return self._type
 
 class Sender(Port):
-    def __init__(self, name: str, dtype: type[data.Type]):
+    def __init__(self, name: str, dtype: type[Type]):
         super().__init__(name, dtype)
         self._targets: set[tuple[Node, Receiver]] = set() # list of targets, both Node and Port
         #TODO self._targets may need to be dict[Node, set(Receiver)] to prevent double-
@@ -33,12 +33,12 @@ class Sender(Port):
     def get_num_targets(self) -> int:
         return len(self._targets)
 
-    def attach_receiver(self, node: Node, receiver: "Receiver"):
+    def attach_receiver(self, node: "Node", receiver: "Receiver"):
         if not node.has_specific_receiver(receiver):
             raise ValueError(f"receiver `{receiver.name}` doesn't exist in Node `{node.name}`")
         self._targets.add((node, receiver))
 
-    def detach_receiver(self, node: Node, receiver: "Receiver", throw_on_missing: bool = False) -> bool:
+    def detach_receiver(self, node: "Node", receiver: "Receiver", throw_on_missing: bool = False) -> bool:
         if not node.has_specific_receiver(receiver):
             raise ValueError(f"receiver `{receiver.name}` doesn't exist in Node `{node.name}`")
 
@@ -50,14 +50,14 @@ class Sender(Port):
         return False
 
 class Receiver(Port):
-    def __init__(self, name: str, dtype: type[data.Type]):
+    def __init__(self, name: str, dtype: type[Type]):
         super().__init__(name, dtype)
         self._source: tuple[Node, Sender] | None = None # list of targets, both Node and Port
 
     def has_source(self) -> bool:
         return self._source is not None
 
-    def set_source(self, node: Node, sender: Sender) -> None:
+    def set_source(self, node: "Node", sender: Sender) -> None:
         if self._source is not None:
             raise RuntimeError(f"receiver `{self.name}` has already been attached to `{sender.name}` in "
                              f"Node `{node.name}`, please detach explicitly first")
@@ -72,7 +72,7 @@ class Receiver(Port):
     def source(self) -> tuple[Self, Sender] | None:
         return self._source
 
-    def get_source_node(self) -> Node:
+    def get_source_node(self) -> "Node":
         return self._source[0] if self.has_source() else None
 
     def get_source_sender(self) -> Sender:

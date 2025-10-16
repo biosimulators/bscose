@@ -17,8 +17,12 @@ class Integer(RealNumber):
 class Increment(PatientOperation):
     def __init__(self, name: str, *args, **kwargs) -> None:
         super().__init__(name, *args, **kwargs)
-        input_num_name = "input_num"
-        output_num_name = "output_num"
+        self._add_receiver(Receiver("value", RealNumber))
+        self._add_sender(Sender("result", RealNumber))
 
-        self._inputs[input_num_name] = Receiver(input_num_name, RealNumber)
-        self._outputs[output_num_name] = Sender(output_num_name, RealNumber)
+class Addition(PatientOperation):
+    def __init__(self, name: str, *args, **kwargs) -> None:
+        super().__init__(name, *args, **kwargs)
+        self._add_receiver(Receiver("addend_1", RealNumber))
+        self._add_receiver(Receiver("addend_2", RealNumber))
+        self._add_sender(Sender("result", RealNumber))

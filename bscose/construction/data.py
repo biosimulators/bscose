@@ -71,20 +71,3 @@ class Type:
         if not isinstance(other, Type):
             return False
         return str(self) == str(other)
-
-# Only including these for placeholder demo purposes; should not be used long-term!
-@deprecated
-class StringUnit(Unit):
-    pass
-
-@deprecated
-class StringClassification(Classification):
-    pass
-
-@deprecated
-class StringType(Type):
-    def __init__(self):
-        super().__init__(StringClassification, StringUnit)
-
-    def __str__(self):
-        return super().__str__()
