@@ -1,0 +1,7 @@
+[project]
+name = "BScose"
+version = "0.1.0"
+description = 'BScose is a "builder-library" made by the BioSimulations project that allow users to design and export Sed2 Experiments in a simple and robust way.'
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
