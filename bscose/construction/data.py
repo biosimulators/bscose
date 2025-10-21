@@ -10,7 +10,6 @@ quantity [units] of Classification<category_subtype> ?
 [3, 0, 4] m/s2 of Acceleration
 500 s of Time
 """
-from warnings import deprecated
 
 #TODO: Add "unit-system" class
 
