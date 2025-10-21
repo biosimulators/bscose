@@ -19,8 +19,8 @@ def test_setting_and_getting_parameters():
     graph.add_operation(Addition, "A")
     graph.set_parameter("A", "addend_1", 3)
     graph.set_parameter("A", "addend_2", 4)
-    params = graph.get_all_parameters_as_list_to_display()
-    expected = ['"α.A::addend_1" = `3`', '"α.A::addend_2" = `4`']
+    params = graph.get_all_parameters_to_display()
+    expected = {'"α.A::addend_1" = `3`', '"α.A::addend_2" = `4`'}
     assert params == expected
 
 

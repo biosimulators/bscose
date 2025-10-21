@@ -29,15 +29,15 @@ class Recipe:
     def get_all_parameters(self) -> dict[Chain, dict[Node, list[Receiver]]]:
         return { self._chains[chain]: self._chains[chain].get_all_parameters() for chain in self._chains }
 
-    def get_all_parameters_as_list_to_display(self) -> list[str]:
-        parameters_strings = []
+    def get_all_parameters_to_display(self) -> set[str]:
+        parameters_strings = set()
         for chain in self.parameters:
             for node in [chain.get(node_name) for node_name in chain.get_all_node_names()]:
                 for param in node.get_parameters():
                     if param not in self.parameters[chain][node]:
                         continue
                     value = self.parameters[chain][node][param]
-                    parameters_strings.append(f"\"{chain.name}.{node.name}::{param.name}\" = `{str(value)}`")
+                    parameters_strings.add(f"\"{chain.name}.{node.name}::{param.name}\" = `{str(value)}`")
         return parameters_strings
 
     def set_parameter(self, node_name: str, parameter_name: str, value: Any):
@@ -75,7 +75,7 @@ class Recipe:
             chain_section_formatter.add_parts(chain_declaration_section, nodes_in_chain_section, chain_connections_section)
         connections_section = "\tconnections: \n\t\t"+ "\n\t\t".join(chain_section_formatter.get_parts_formatted())
 
-        parameters_strings = self.get_all_parameters_as_list_to_display()
+        parameters_strings = self.get_all_parameters_to_display()
 
         parameters_section = "\tparameters: \n\t\t"+ "\n\t\t".join(parameters_strings) if len(parameters_strings) != 0 \
             else "\tparameters: DEFAULTS"
