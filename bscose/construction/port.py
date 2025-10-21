@@ -33,6 +33,9 @@ class Sender(Port):
     def get_num_targets(self) -> int:
         return len(self._targets)
 
+    def get_sorted_targets(self) -> list[tuple["Node", "Receiver"]]:
+        return sorted(self._targets, key=lambda r: r[0].name + r[1].name)
+
     def attach_receiver(self, node: "Node", receiver: "Receiver"):
         if not node.has_specific_receiver(receiver):
             raise ValueError(f"receiver `{receiver.name}` doesn't exist in Node `{node.name}`")

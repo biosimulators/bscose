@@ -1,4 +1,3 @@
-import pytest
 from bscose.construction.graph import Pipeline
 from bscose.example_nodes.math_examples import Increment
 from bscose.construction.node import Operation
@@ -16,6 +15,6 @@ def test_nodes_can_connected():
     b: Operation = graph.add_operation(Increment, "B", ).get("B")
     assert graph.get_num_chains() == 2
     assert graph.get_num_nodes() == 2
-    graph.connect_nodes("A", "B", [("result","value")])
+    graph.connect_nodes(a, b, [("result","value")])
     assert graph.get_num_chains() == 1
     assert graph.get_num_nodes() == 2
