@@ -75,7 +75,7 @@ class Recipe:
             chain_section_formatter.add_parts(chain_declaration_section, nodes_in_chain_section, chain_connections_section)
         connections_section = "\tconnections: \n\t\t"+ "\n\t\t".join(chain_section_formatter.get_parts_formatted())
 
-        parameters_strings = self.get_all_parameters_to_display()
+        parameters_strings = sorted(self.get_all_parameters_to_display())
 
         parameters_section = "\tparameters: \n\t\t"+ "\n\t\t".join(parameters_strings) if len(parameters_strings) != 0 \
             else "\tparameters: DEFAULTS"
